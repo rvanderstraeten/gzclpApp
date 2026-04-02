@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a1a">
+<title>GZCLP Tracker</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --surface3: #2e2e2e;
+    --border: #333;
+    --text: #f0f0f0;
+    --text2: #999;
+    --text3: #666;
+    --accent: #e8c547;
+    --accent2: #b8960f;
+    --red: #e05555;
+    --green: #5aad5a;
+    --blue: #5599dd;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; }
+
+  /* LAYOUT */
+  #app { height: 100vh; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; position: relative; }
+  #header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg); }
+  #header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent); }
+  #header .subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  #nav { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg); }
+  .nav-btn { flex: 1; padding: 12px 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text3); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  #content { flex: 1; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+
+  /* SCREENS */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); margin-bottom: 12px; }
+
+  /* WORKOUT SCREEN */
+  .week-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .week-selector select { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); padding: 10px 14px; font-size: 14px; font-weight: 600; -webkit-appearance: none; appearance: none; }
+  .week-selector .day-tabs { display: flex; gap: 6px; }
+  .day-tab { width: 44px; height: 44px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .day-tab.active { background: var(--accent); color: #1a1a1a; border-color: var(--accent); }
+
+  .exercise-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+  .ex-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .ex-name { font-size: 16px; font-weight: 700; }
+  .ex-tier { font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; }
+  .tier-t1 { background: #e8c54722; color: var(--accent); border: 1px solid #e8c54744; }
+  .tier-t2 { background: #5599dd22; color: var(--blue); border: 1px solid #5599dd44; }
+  .tier-t3 { background: #5aad5a22; color: var(--green); border: 1px solid #5aad5a44; }
+
+  .ex-meta { display: flex; gap: 16px; margin-bottom: 12px; }
+  .ex-stat { text-align: center; }
+  .ex-stat .val { font-size: 20px; font-weight: 700; }
+  .ex-stat .lbl { font-size: 10px; color: var(--text2); margin-top: 2px; }
+  .ex-stat .val.accent { color: var(--accent); }
+
+  .sets-grid { display: grid; gap: 8px; }
+  .set-row { display: flex; align-items: center; gap: 10px; }
+  .set-label { font-size: 12px; color: var(--text2); width: 36px; font-weight: 600; }
+  .set-target { font-size: 12px; color: var(--text3); width: 28px; text-align: center; }
+  .rep-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); padding: 10px; font-size: 18px; font-weight: 700; text-align: center; width: 100%; -webkit-appearance: none; }
+  .rep-input:focus { outline: none; border-color: var(--accent); background: var(--surface3); }
+  .rep-input.good { border-color: var(--green); }
+  .rep-input.fail { border-color: var(--red); }
+  .amrap-badge { font-size: 10px; color: var(--accent); font-weight: 700; width: 28px; text-align: center; }
+
+  .save-btn { width: 100%; padding: 16px; background: var(--accent); color: #1a1a1a; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; margin-top: 12px; transition: all 0.15s; }
+  .save-btn:active { transform: scale(0.98); background: var(--accent2); }
+
+  .next-preview { margin-top: 10px; padding: 10px 14px; background: var(--surface2); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  .next-preview .lbl { font-size: 10px; color: var(--text2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .next-preview .val { font-size: 13px; color: var(--text); font-weight: 600; }
+
+  /* HISTORY SCREEN */
+  .history-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+  .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .history-date { font-size: 14px; font-weight: 700; }
+  .history-week { font-size: 11px; color: var(--text2); background: var(--surface2); padding: 3px 10px; border-radius: 20px; }
+  .history-lifts { display: flex; flex-direction: column; gap: 6px; }
+  .history-lift { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+  .history-lift .name { color: var(--text2); }
+  .history-lift .result { font-weight: 700; }
+  .result-ok { color: var(--green); }
+  .result-fail { color: var(--red); }
+
+  /* SETUP SCREEN */
+  .setup-section { margin-bottom: 20px; }
+  .setup-section h3 { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .field-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .field-row label { font-size: 14px; color: var(--text); flex: 1; font-weight: 500; }
+  .field-row input[type=number] { width: 90px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); padding: 10px 12px; font-size: 16px; font-weight: 700; text-align: center; -webkit-appearance: none; }
+  .field-row input:focus { outline: none; border-color: var(--accent); }
+  .unit-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+  .unit-btn { flex: 1; padding: 10px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; background: transparent; color: var(--text2); transition: all 0.15s; }
+  .unit-btn.active { background: var(--accent); color: #1a1a1a; }
+
+  .primary-btn { width: 100%; padding: 14px; background: var(--accent); color: #1a1a1a; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 800; cursor: pointer; margin-top: 8px; }
+  .secondary-btn { width: 100%; padding: 12px; background: transparent; color: var(--text2); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface3); color: var(--text); padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 100; pointer-events: none; border: 1px solid var(--border); max-width: 90vw; text-align: center; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* MODAL */
+  #modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
+  #modal-overlay.show { display: flex; }
+  #modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 24px 20px; width: 100%; max-width: 480px; border-top: 1px solid var(--border); }
+  #modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  #modal p { font-size: 14px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-btns button { flex: 1; padding: 14px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; cursor: pointer; border: none; }
+  .btn-cancel { background: var(--surface2); color: var(--text); }
+  .btn-confirm { background: var(--accent); color: #1a1a1a; }
+
+  /* PROGRESS BAR */
+  .progress-bar { height: 4px; background: var(--surface3); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 48px 20px; color: var(--text2); }
+  .empty .icon { font-size: 48px; margin-bottom: 16px; }
+  .empty h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .empty p { font-size: 14px; line-height: 1.6; }
+
+  /* STATS */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+  .stat-card .lbl { font-size: 11px; color: var(--text2); letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat-card .val { font-size: 22px; font-weight: 800; }
+  .stat-card .sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <h1>GZCLP</h1>
+    <div class="subtitle" id="header-sub">Loading...</div>
+  </div>
+  <div id="nav">
+    <button class="nav-btn active" onclick="showScreen('workout')">Workout</button>
+    <button class="nav-btn" onclick="showScreen('history')">Geschiedenis</button>
+    <button class="nav-btn" onclick="showScreen('stats')">Stats</button>
+    <button class="nav-btn" onclick="showScreen('setup')">Instellingen</button>
+  </div>
+  <div id="content">
+
+    <!-- WORKOUT SCREEN -->
+    <div id="screen-workout" class="screen active">
+      <div id="workout-content"></div>
+    </div>
+
+    <!-- HISTORY SCREEN -->
+    <div id="screen-history" class="screen">
+      <div id="history-content"></div>
+    </div>
+
+    <!-- STATS SCREEN -->
+    <div id="screen-stats" class="screen">
+      <div id="stats-content"></div>
+    </div>
+
+    <!-- SETUP SCREEN -->
+    <div id="screen-setup" class="screen">
+      <div id="setup-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="modal-overlay">
+  <div id="modal">
+    <h3 id="modal-title"></h3>
+    <p id="modal-body"></p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Annuleer</button>
+      <button class="btn-confirm" id="modal-confirm">Bevestig</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA MODEL
+// ============================================================
+const T1_SCHEMES = ['5x3+','6x2+','10x1+'];
+const T1_BASES   = [15, 12, 10];
+const T2_SCHEMES = ['3x10','3x8','3x6'];
+const T2_BASES   = [30, 24, 18];
+const T3_SCHEME  = '3x15+';
+
+const DEFAULT_EXERCISES = {
+  t1: ['Squat','Bench','OHP','Deadlift'],
+  t2_map: { Squat:'Bench', Bench:'Deadlift', OHP:'Squat', Deadlift:'OHP' },
+  t3: [
+    ['Incline DB Bench','Hip Thrust'],
+    ['Incline DB Bench','Flat DB Bench'],
+    ['Lateral Raises','Bicep Curls']
+  ]
+};
+
+const T1_ROTATION = ['Squat','Bench','Deadlift','OHP'];
+const T2_ROTATION = ['Bench','Deadlift','OHP','Squat'];
+
+const DAYS_PER_WEEK = 3;
+const TOTAL_WEEKS   = 12;
+
+let state = null;
+
+function defaultState() {
+  return {
+    unit: 'kg',
+    block: 1,
+    startWeights: { Squat: 80, Bench: 60, OHP: 40, Deadlift: 100 },
+    increments: { Squat: 4, Bench: 2, OHP: 2, Deadlift: 4, t2: 2, t3: 2 },
+    t1State: {
+      Squat:     { schemeIdx: 0, weight: 80 },
+      Bench:     { schemeIdx: 0, weight: 60 },
+      OHP:       { schemeIdx: 0, weight: 40 },
+      Deadlift:  { schemeIdx: 0, weight: 100 }
+    },
+    t2State: {
+      Squat:     { schemeIdx: 0, weight: 40 },
+      Bench:     { schemeIdx: 0, weight: 30 },
+      OHP:       { schemeIdx: 0, weight: 20 },
+      Deadlift:  { schemeIdx: 0, weight: 50 }
+    },
+    t3Weights: { 'Incline DB Bench': 12, 'Hip Thrust': 20, 'Flat DB Bench': 12, 'Lateral Raises': 6, 'Bicep Curls': 6 },
+    t3Config: [
+      { count: 2, exercises: ['Incline DB Bench', 'Hip Thrust'] },
+      { count: 2, exercises: ['Incline DB Bench', 'Flat DB Bench'] },
+      { count: 2, exercises: ['Lateral Raises', 'Bicep Curls'] }
+    ],
+    currentWeek: 1,
+    currentDay: 1,
+    history: [],
+    setupDone: false
+  };
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('gzclp_v2');
+    state = raw ? JSON.parse(raw) : defaultState();
+    // migrate: add t3Config if missing
+    if (!state.t3Config) {
+      state.t3Config = [
+        { count: 2, exercises: ['Incline DB Bench', 'Hip Thrust'] },
+        { count: 2, exercises: ['Incline DB Bench', 'Flat DB Bench'] },
+        { count: 2, exercises: ['Lateral Raises', 'Bicep Curls'] }
+      ];
+    }
+  } catch(e) { state = defaultState(); }
+}
+
+function save() {
+  localStorage.setItem('gzclp_v2', JSON.stringify(state));
+}
+
+// ============================================================
+// PROGRESSION LOGIC
+// ============================================================
+function getT1Info(lift) {
+  const s = state.t1State[lift];
+  const scheme = T1_SCHEMES[s.schemeIdx];
+  const parts = scheme.replace('+','').split('x');
+  return { sets: parseInt(parts[0]), reps: parseInt(parts[1]), weight: s.weight, scheme, schemeIdx: s.schemeIdx };
+}
+
+function getT2Info(lift) {
+  const s = state.t2State[lift];
+  const scheme = T2_SCHEMES[s.schemeIdx];
+  const parts = scheme.split('x');
+  return { sets: parseInt(parts[0]), reps: parseInt(parts[1]), weight: s.weight, scheme, schemeIdx: s.schemeIdx };
+}
+
+function applyT1Result(lift, repsPerSet) {
+  const info = getT1Info(lift);
+  const needed = T1_BASES[info.schemeIdx];
+  const total = repsPerSet.reduce((a,b)=>a+b,0);
+  const achieved = total >= needed;
+
+  if (achieved) {
+    state.t1State[lift].weight = roundWeight(info.weight + state.increments[lift]);
+  } else {
+    const nextIdx = info.schemeIdx + 1;
+    if (nextIdx < T1_SCHEMES.length) {
+      state.t1State[lift].schemeIdx = nextIdx;
+    } else {
+      state.t1State[lift].schemeIdx = 0;
+      state.t1State[lift].weight = roundWeight(info.weight * 0.85);
+    }
+  }
+  return achieved;
+}
+
+function applyT2Result(lift, repsPerSet) {
+  const info = getT2Info(lift);
+  const needed = T2_BASES[info.schemeIdx];
+  const total = repsPerSet.reduce((a,b)=>a+b,0);
+  const achieved = total >= needed;
+
+  if (achieved) {
+    state.t2State[lift].weight = roundWeight(info.weight + state.increments.t2);
+  } else {
+    const nextIdx = info.schemeIdx + 1;
+    if (nextIdx < T2_SCHEMES.length) {
+      state.t2State[lift].schemeIdx = nextIdx;
+    } else {
+      state.t2State[lift].schemeIdx = 0;
+      state.t2State[lift].weight = roundWeight(info.weight * 1.05);
+    }
+  }
+  return achieved;
+}
+
+function roundWeight(w) {
+  return Math.round(w * 2) / 2;
+}
+
+function getDayExercises(week, day) {
+  const sessionIdx = (week - 1) * DAYS_PER_WEEK + (day - 1);
+  const t1Lift = T1_ROTATION[sessionIdx % 4];
+  const t2Lift = T2_ROTATION[sessionIdx % 4];
+  const t3Cfg = state.t3Config[(day - 1) % 3];
+  const t3Pair = t3Cfg.exercises.slice(0, t3Cfg.count);
+  return { t1Lift, t2Lift, t3Pair, sessionIdx };
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function showToast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+let modalCb = null;
+function showModal(title, body, cb) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = body;
+  document.getElementById('modal-overlay').classList.add('show');
+  modalCb = cb;
+  document.getElementById('modal-confirm').onclick = () => { closeModal(); if(modalCb) modalCb(); };
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  const btns = document.querySelectorAll('.nav-btn');
+  const names = ['workout','history','stats','setup'];
+  btns[names.indexOf(name)].classList.add('active');
+  if (name==='workout') renderWorkout();
+  if (name==='history') renderHistory();
+  if (name==='stats') renderStats();
+  if (name==='setup') renderSetup();
+}
+
+function updateHeader() {
+  const sub = `Blok ${state.block} · Week ${state.currentWeek}/12 · Dag ${state.currentDay}`;
+  document.getElementById('header-sub').textContent = sub;
+}
+
+// ============================================================
+// WORKOUT SCREEN
+// ============================================================
+function renderWorkout() {
+  updateHeader();
+  const { t1Lift, t2Lift, t3Pair } = getDayExercises(state.currentWeek, state.currentDay);
+  const t1 = getT1Info(t1Lift);
+  const t2 = getT2Info(t2Lift);
+  const pct = ((state.currentWeek - 1) * 3 + state.currentDay) / 36 * 100;
+
+  // Look up historical entry for this week/day
+  const hist = state.history.find(e => e.block === state.block && e.week === state.currentWeek && e.day === state.currentDay);
+
+  let html = `
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct.toFixed(1)}%"></div></div>
+    <div class="week-selector">
+      <select onchange="changeWeek(this.value)">
+        ${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${state.currentWeek===i+1?'selected':''}>Week ${i+1}</option>`).join('')}
+      </select>
+      <div class="day-tabs">
+        ${[1,2,3].map(d=>`<button class="day-tab ${state.currentDay===d?'active':''}" onclick="changeDay(${d})">D${d}</button>`).join('')}
+      </div>
+    </div>`;
+
+  if (hist) {
+    html += `<div style="padding:8px 12px;background:#5aad5a22;border:1px solid #5aad5a44;border-radius:var(--radius-sm);margin-bottom:12px;font-size:12px;color:var(--green);font-weight:600;">Opgeslagen sessie</div>`;
+  }
+
+  // T1
+  const t1Display = hist ? { ...t1, weight: hist.t1.weight, scheme: hist.t1.scheme } : t1;
+  const t2Display = hist ? { ...t2, weight: hist.t2.weight, scheme: hist.t2.scheme } : t2;
+  html += renderT1Block(t1Lift, t1Display, hist?.t1?.reps);
+  // T2
+  html += renderT2Block(t2Lift, t2Display, hist?.t2?.reps);
+  // T3
+  t3Pair.forEach(ex => {
+    const histT3 = hist?.t3?.find(t => t.lift === ex);
+    const w = histT3 ? histT3.weight : (state.t3Weights[ex] || 10);
+    html += renderT3Block(ex, w, histT3?.reps);
+  });
+
+  const saveLabel = hist ? 'Sessie overschrijven' : 'Sessie opslaan';
+  html += `<button class="save-btn" onclick="saveWorkout()">${saveLabel}</button>`;
+  document.getElementById('workout-content').innerHTML = html;
+}
+
+function renderT1Block(lift, info, savedReps) {
+  const setRows = Array.from({length: info.sets}, (_,i) => {
+    const isLast = i === info.sets - 1;
+    const val = savedReps ? savedReps[i] : null;
+    const colorClass = val != null ? (val >= info.reps ? 'good' : 'fail') : '';
+    return `<div class="set-row">
+      <span class="set-label">Set ${i+1}</span>
+      <span class="set-target">${info.reps}</span>
+      <input type="number" class="rep-input ${colorClass}" id="t1_${lift}_${i}" placeholder="-" min="0" max="30"
+        ${val != null ? `value="${val}"` : ''}
+        oninput="colorInput(this,${info.reps})" inputmode="numeric">
+      ${isLast ? `<span class="amrap-badge">AMRAP</span>` : `<span class="amrap-badge"></span>`}
+    </div>`;
+  }).join('');
+
+  return `<div class="exercise-block">
+    <div class="ex-header">
+      <div>
+        <div class="ex-name">${lift}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${info.scheme} · ${info.weight} ${state.unit}</div>
+      </div>
+      <span class="ex-tier tier-t1">T1</span>
+    </div>
+    <div class="sets-grid">${setRows}</div>
+  </div>`;
+}
+
+function renderT2Block(lift, info, savedReps) {
+  const setRows = Array.from({length: info.sets}, (_,i) => {
+    const val = savedReps ? savedReps[i] : null;
+    const colorClass = val != null ? (val >= info.reps ? 'good' : 'fail') : '';
+    return `<div class="set-row">
+      <span class="set-label">Set ${i+1}</span>
+      <span class="set-target">${info.reps}</span>
+      <input type="number" class="rep-input ${colorClass}" id="t2_${lift}_${i}" placeholder="-" min="0" max="30"
+        ${val != null ? `value="${val}"` : ''}
+        oninput="colorInput(this,${info.reps})" inputmode="numeric">
+      <span class="amrap-badge"></span>
+    </div>`;
+  }).join('');
+
+  return `<div class="exercise-block">
+    <div class="ex-header">
+      <div>
+        <div class="ex-name">${lift}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;">${info.scheme} · ${info.weight} ${state.unit}</div>
+      </div>
+      <span class="ex-tier tier-t2">T2</span>
+    </div>
+    <div class="sets-grid">${setRows}</div>
+  </div>`;
+}
+
+function renderT3Block(ex, weight, savedReps) {
+  const sets = 3, reps = 15;
+  const setRows = Array.from({length: sets}, (_,i) => {
+    const isLast = i === sets - 1;
+    const val = savedReps ? savedReps[i] : null;
+    const colorClass = val != null ? (val >= reps ? 'good' : 'fail') : '';
+    return `<div class="set-row">
+      <span class="set-label">Set ${i+1}</span>
+      <span class="set-target">${reps}</span>
+      <input type="number" class="rep-input ${colorClass}" id="t3_${ex.replace(/\s/g,'_')}_${i}" placeholder="-" min="0" max="50"
+        ${val != null ? `value="${val}"` : ''}
+        oninput="colorInput(this,${reps})" inputmode="numeric">
+      ${isLast ? `<span class="amrap-badge">AMRAP</span>` : `<span class="amrap-badge"></span>`}
+    </div>`;
+  }).join('');
+
+  return `<div class="exercise-block">
+    <div class="ex-header">
+      <div>
+        <div class="ex-name">${ex}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;">3x15+ · ${weight} ${state.unit}</div>
+      </div>
+      <span class="ex-tier tier-t3">T3</span>
+    </div>
+    <div class="sets-grid">${setRows}</div>
+  </div>`;
+}
+
+function colorInput(el, target) {
+  const val = parseInt(el.value);
+  el.classList.remove('good','fail');
+  if (!isNaN(val)) {
+    if (val >= target) el.classList.add('good');
+    else el.classList.add('fail');
+  }
+}
+
+function changeWeek(w) {
+  state.currentWeek = parseInt(w);
+  save();
+  renderWorkout();
+}
+
+function changeDay(d) {
+  state.currentDay = d;
+  save();
+  renderWorkout();
+}
+
+function saveWorkout() {
+  const { t1Lift, t2Lift, t3Pair } = getDayExercises(state.currentWeek, state.currentDay);
+  const t1 = getT1Info(t1Lift);
+  const t2 = getT2Info(t2Lift);
+
+  // Read T1 reps
+  const t1Reps = Array.from({length: t1.sets}, (_,i) => {
+    const el = document.getElementById(`t1_${t1Lift}_${i}`);
+    return parseInt(el?.value) || 0;
+  });
+
+  // Read T2 reps
+  const t2Reps = Array.from({length: t2.sets}, (_,i) => {
+    const el = document.getElementById(`t2_${t2Lift}_${i}`);
+    return parseInt(el?.value) || 0;
+  });
+
+  // Read T3 reps
+  const t3Data = {};
+  t3Pair.forEach(ex => {
+    const key = ex.replace(/\s/g,'_');
+    t3Data[ex] = Array.from({length:3},(_,i)=>parseInt(document.getElementById(`t3_${key}_${i}`)?.value)||0);
+  });
+
+  // Validate - at least T1 filled in
+  if (t1Reps.every(r=>r===0)) {
+    showToast('Vul minstens de T1 sets in');
+    return;
+  }
+
+  // Compute results
+  const t1Total = t1Reps.reduce((a,b)=>a+b,0);
+  const t1Needed = T1_BASES[t1.schemeIdx];
+  const t1Ok = t1Total >= t1Needed;
+
+  const t2Total = t2Reps.reduce((a,b)=>a+b,0);
+  const t2Needed = T2_BASES[t2.schemeIdx];
+  const t2Ok = t2Total >= t2Needed;
+
+  // Save to history
+  const entry = {
+    date: new Date().toISOString(),
+    block: state.block,
+    week: state.currentWeek,
+    day: state.currentDay,
+    t1: { lift: t1Lift, scheme: t1.scheme, weight: t1.weight, reps: t1Reps, ok: t1Ok },
+    t2: { lift: t2Lift, scheme: t2.scheme, weight: t2.weight, reps: t2Reps, ok: t2Ok },
+    t3: t3Pair.map(ex => ({ lift: ex, weight: state.t3Weights[ex]||10, reps: t3Data[ex] }))
+  };
+  state.history.push(entry);
+
+  // Apply progression
+  const prevT1Weight = t1.weight;
+  const prevT1Scheme = t1.scheme;
+  const prevT2Weight = t2.weight;
+
+  applyT1Result(t1Lift, t1Reps);
+  applyT2Result(t2Lift, t2Reps);
+
+  // T3 progression: if last set >= 25, increase weight
+  t3Pair.forEach(ex => {
+    const reps = t3Data[ex];
+    if (reps[2] >= 25) {
+      state.t3Weights[ex] = roundWeight((state.t3Weights[ex]||10) + state.increments.t3);
+    }
+  });
+
+  // Advance day/week
+  const wasWeek = state.currentWeek;
+  const wasDay = state.currentDay;
+
+  if (state.currentDay < 3) {
+    state.currentDay++;
+  } else if (state.currentWeek < 12) {
+    state.currentDay = 1;
+    state.currentWeek++;
+  } else {
+    // Block complete!
+    showModal(
+      'Blok voltooid!',
+      `Je hebt blok ${state.block} afgerond. Klaar voor blok ${state.block+1}?`,
+      () => {
+        state.block++;
+        state.currentWeek = 1;
+        state.currentDay = 1;
+        save();
+        renderWorkout();
+        showToast(`Blok ${state.block} gestart!`);
+      }
+    );
+    save();
+    renderWorkout();
+    showToast(t1Ok ? 'Sessie opgeslagen!' : 'Sessie opgeslagen - gewicht blijft gelijk');
+    return;
+  }
+
+  save();
+  renderWorkout();
+
+  const t1NewInfo = getT1Info(t1Lift);
+  let msg = t1Ok
+    ? `${t1Lift}: ${prevT1Weight} → ${t1NewInfo.weight} ${state.unit}`
+    : `${t1Lift}: schema → ${t1NewInfo.scheme}`;
+  showToast(msg);
+}
+
+// ============================================================
+// HISTORY SCREEN
+// ============================================================
+function renderHistory() {
+  const content = document.getElementById('history-content');
+  if (state.history.length === 0) {
+    content.innerHTML = `<div class="empty">
+      <div class="icon">📋</div>
+      <h3>Geen sessies nog</h3>
+      <p>Je geschiedenis verschijnt hier na je eerste workout.</p>
+    </div>`;
+    return;
+  }
+
+  const sorted = [...state.history].reverse();
+  let html = '';
+
+  const exportBtn = `<button class="secondary-btn" onclick="exportCSV()" style="margin-bottom:16px;">CSV exporteren</button>`;
+  html += exportBtn;
+
+  sorted.forEach(entry => {
+    const d = new Date(entry.date);
+    const dateStr = d.toLocaleDateString('nl-BE', { weekday:'short', day:'numeric', month:'short' });
+    const timeStr = d.toLocaleTimeString('nl-BE', { hour:'2-digit', minute:'2-digit' });
+
+    html += `<div class="history-item">
+      <div class="history-header">
+        <div>
+          <div class="history-date">${dateStr} · ${timeStr}</div>
+        </div>
+        <div class="history-week">B${entry.block} W${entry.week} D${entry.day}</div>
+      </div>
+      <div class="history-lifts">
+        <div class="history-lift">
+          <span class="name">${entry.t1.lift} T1 (${entry.t1.scheme})</span>
+          <span class="result ${entry.t1.ok?'result-ok':'result-fail'}">
+            ${entry.t1.weight} ${state.unit} · ${entry.t1.reps.join('-')} ${entry.t1.ok?'✓':'✗'}
+          </span>
+        </div>
+        <div class="history-lift">
+          <span class="name">${entry.t2.lift} T2 (${entry.t2.scheme})</span>
+          <span class="result ${entry.t2.ok?'result-ok':'result-fail'}">
+            ${entry.t2.weight} ${state.unit} · ${entry.t2.reps.join('-')} ${entry.t2.ok?'✓':'✗'}
+          </span>
+        </div>
+        ${entry.t3.map(t=>
+          `<div class="history-lift">
+            <span class="name">${t.lift} T3</span>
+            <span class="result">${t.weight} ${state.unit} · ${t.reps.join('-')}</span>
+          </div>`
+        ).join('')}
+      </div>
+    </div>`;
+  });
+
+  content.innerHTML = html;
+}
+
+function exportCSV() {
+  let csv = 'Datum,Blok,Week,Dag,Tier,Oefening,Schema,Gewicht,Reps,Gehaald\n';
+  state.history.forEach(entry => {
+    const d = new Date(entry.date).toLocaleDateString('nl-BE');
+    const base = `${d},${entry.block},${entry.week},${entry.day}`;
+    csv += `${base},T1,${entry.t1.lift},${entry.t1.scheme},${entry.t1.weight},"${entry.t1.reps.join('-')}",${entry.t1.ok?'Ja':'Nee'}\n`;
+    csv += `${base},T2,${entry.t2.lift},${entry.t2.scheme},${entry.t2.weight},"${entry.t2.reps.join('-')}",${entry.t2.ok?'Ja':'Nee'}\n`;
+    entry.t3.forEach(t => {
+      csv += `${base},T3,${t.lift},3x15+,${t.weight},"${t.reps.join('-')}",\n`;
+    });
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `gzclp_blok${state.block}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV geëxporteerd');
+}
+
+// ============================================================
+// STATS SCREEN
+// ============================================================
+function renderStats() {
+  const content = document.getElementById('stats-content');
+  const h = state.history;
+
+  if (h.length === 0) {
+    content.innerHTML = `<div class="empty"><div class="icon">📊</div><h3>Geen data nog</h3><p>Stats verschijnen na je eerste sessies.</p></div>`;
+    return;
+  }
+
+  const totalSessions = h.length;
+  const t1Success = h.filter(e=>e.t1.ok).length;
+  const successRate = Math.round(t1Success / totalSessions * 100);
+
+  // Current weights
+  const lifts = ['Squat','Bench','OHP','Deadlift'];
+
+  let html = `
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="lbl">Sessies</div>
+        <div class="val">${totalSessions}</div>
+        <div class="sub">Blok ${state.block}</div>
+      </div>
+      <div class="stat-card">
+        <div class="lbl">T1 Slagingsrate</div>
+        <div class="val" style="color:${successRate>=70?'var(--green)':'var(--red)'}">${successRate}%</div>
+        <div class="sub">${t1Success}/${totalSessions} sets</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Huidige gewichten (T1)</div>
+      ${lifts.map(lift => {
+        const info = getT1Info(lift);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:15px;font-weight:700;">${lift}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px;">${info.scheme}</div>
+          </div>
+          <div style="font-size:20px;font-weight:800;color:var(--accent)">${info.weight} <span style="font-size:12px;color:var(--text2)">${state.unit}</span></div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Huidige gewichten (T2)</div>
+      ${lifts.map(lift => {
+        const info = getT2Info(lift);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:15px;font-weight:700;">${lift}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px;">${info.scheme}</div>
+          </div>
+          <div style="font-size:20px;font-weight:800;color:var(--blue)">${info.weight} <span style="font-size:12px;color:var(--text2)">${state.unit}</span></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  content.innerHTML = html;
+}
+
+// ============================================================
+// SETUP SCREEN
+// ============================================================
+function renderSetup() {
+  const lifts = ['Squat','Bench','OHP','Deadlift'];
+  let html = `
+    <div class="setup-section">
+      <h3>Eenheid</h3>
+      <div class="unit-toggle">
+        <button class="unit-btn ${state.unit==='kg'?'active':''}" onclick="setUnit('kg')">Kg</button>
+        <button class="unit-btn ${state.unit==='lbs'?'active':''}" onclick="setUnit('lbs')">Lbs</button>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <h3>Startgewichten T1</h3>
+      ${lifts.map(l=>`
+        <div class="field-row">
+          <label>${l}</label>
+          <input type="number" id="sw_${l}" value="${state.startWeights[l]}" step="2.5" min="0" onchange="updateStartWeight('${l}',this.value)">
+        </div>`).join('')}
+    </div>
+
+    <div class="setup-section">
+      <h3>Incrementen (per sessie)</h3>
+      ${lifts.map(l=>`
+        <div class="field-row">
+          <label>${l} T1</label>
+          <input type="number" id="inc_${l}" value="${state.increments[l]}" step="0.5" min="0.5" onchange="updateIncrement('${l}',this.value)">
+        </div>`).join('')}
+      <div class="field-row">
+        <label>T2 (alle)</label>
+        <input type="number" id="inc_t2" value="${state.increments.t2}" step="0.5" min="0.5" onchange="updateIncrement('t2',this.value)">
+      </div>
+      <div class="field-row">
+        <label>T3 (alle)</label>
+        <input type="number" id="inc_t3" value="${state.increments.t3}" step="0.5" min="0.5" onchange="updateIncrement('t3',this.value)">
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <h3>T2 Startgewichten</h3>
+      ${lifts.map(l=>`
+        <div class="field-row">
+          <label>${l}</label>
+          <input type="number" id="t2sw_${l}" value="${state.t2State[l].weight}" step="2.5" min="0" onchange="updateT2Weight('${l}',this.value)">
+        </div>`).join('')}
+    </div>
+
+    <div class="setup-section">
+      <h3>Blok & Voortgang</h3>
+      <div class="field-row">
+        <label>Huidig blok</label>
+        <input type="number" id="block_num" value="${state.block}" min="1" onchange="updateBlock(this.value)">
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <h3>T3 Oefeningen per dag</h3>
+      ${[0,1,2].map(dayIdx => {
+        const cfg = state.t3Config[dayIdx];
+        const slots = [0,1,2];
+        return `<div style="margin-bottom:16px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">Dag ${dayIdx+1}</div>
+          <div class="field-row" style="margin-bottom:8px;">
+            <label style="font-size:13px;">Aantal T3</label>
+            <div class="unit-toggle" style="width:120px;">
+              ${[1,2,3].map(n=>`<button class="unit-btn ${cfg.count===n?'active':''}" onclick="setT3Count(${dayIdx},${n})">${n}</button>`).join('')}
+            </div>
+          </div>
+          ${slots.map(slotIdx => `
+            <div class="field-row" style="margin-bottom:6px;${slotIdx >= cfg.count ? 'opacity:0.35;pointer-events:none;' : ''}">
+              <label style="font-size:13px;">Oefening ${slotIdx+1}</label>
+              <input type="text" style="width:160px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;font-size:13px;"
+                value="${cfg.exercises[slotIdx] || ''}"
+                placeholder="Naam..."
+                onchange="setT3Exercise(${dayIdx},${slotIdx},this.value)">
+            </div>`).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="setup-section">
+      <h3>T3 Gewichten</h3>
+      <div id="t3-weights-section">
+        ${renderT3WeightFields()}
+      </div>
+    </div>
+
+    <button class="secondary-btn" onclick="confirmReset()">Volledig resetten</button>
+  `;
+  document.getElementById('setup-content').innerHTML = html;
+}
+
+function setUnit(u) {
+  state.unit = u;
+  save();
+  renderSetup();
+  renderWorkout();
+}
+
+function updateStartWeight(lift, val) {
+  const w = parseFloat(val);
+  if (!isNaN(w) && w > 0) {
+    state.startWeights[lift] = w;
+    state.t1State[lift].weight = w;
+    save();
+  }
+}
+
+function updateT2Weight(lift, val) {
+  const w = parseFloat(val);
+  if (!isNaN(w) && w > 0) {
+    state.t2State[lift].weight = w;
+    save();
+  }
+}
+
+function updateIncrement(key, val) {
+  const v = parseFloat(val);
+  if (!isNaN(v) && v > 0) {
+    state.increments[key] = v;
+    save();
+  }
+}
+
+function updateBlock(val) {
+  const b = parseInt(val);
+  if (!isNaN(b) && b > 0) {
+    state.block = b;
+    save();
+  }
+}
+
+function renderT3WeightFields() {
+  const seen = new Set();
+  let html = '';
+  state.t3Config.forEach(cfg => {
+    cfg.exercises.slice(0, cfg.count).forEach(ex => {
+      if (ex && !seen.has(ex)) {
+        seen.add(ex);
+        const w = state.t3Weights[ex] || 10;
+        html += `<div class="field-row">
+          <label style="font-size:13px;">${ex}</label>
+          <input type="number" value="${w}" step="0.5" min="0"
+            style="width:90px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:10px 12px;font-size:16px;font-weight:700;text-align:center;"
+            onchange="updateT3Weight('${ex}',this.value)">
+        </div>`;
+      }
+    });
+  });
+  return html || '<div style="font-size:13px;color:var(--text3)">Geen oefeningen geconfigureerd</div>';
+}
+
+function setT3Count(dayIdx, count) {
+  state.t3Config[dayIdx].count = count;
+  // ensure enough exercise slots exist
+  while (state.t3Config[dayIdx].exercises.length < count) {
+    state.t3Config[dayIdx].exercises.push('');
+  }
+  save();
+  renderSetup();
+}
+
+function setT3Exercise(dayIdx, slotIdx, name) {
+  const trimmed = name.trim();
+  state.t3Config[dayIdx].exercises[slotIdx] = trimmed;
+  if (trimmed && !(trimmed in state.t3Weights)) {
+    state.t3Weights[trimmed] = 10;
+  }
+  save();
+  document.getElementById('t3-weights-section').innerHTML = renderT3WeightFields();
+}
+
+function updateT3Weight(ex, val) {
+  const w = parseFloat(val);
+  if (!isNaN(w) && w >= 0) {
+    state.t3Weights[ex] = w;
+    save();
+  }
+}
+
+function confirmReset() {
+  showModal(
+    'Alles resetten?',
+    'Dit wist alle geschiedenis en instellingen permanent. Niet ongedaan te maken.',
+    () => {
+      state = defaultState();
+      save();
+      renderWorkout();
+      renderSetup();
+      showToast('App gereset');
+      showScreen('setup');
+    }
+  );
+}
+
+// ============================================================
+// INIT
+// ============================================================
+load();
+if (!state.setupDone) {
+  state.setupDone = true;
+  save();
+}
+renderWorkout();
+updateHeader();
+</script>
+</body>
+</html>
